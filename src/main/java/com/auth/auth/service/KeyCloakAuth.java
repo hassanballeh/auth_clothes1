@@ -199,7 +199,8 @@ public class KeyCloakAuth {
     }
     
     private Map<?,?> getUser(String authorizationHeader){
-        String accessToken = extractTokenFromHeader(authorizationHeader);        
+        String accessToken = extractTokenFromHeader(authorizationHeader);
+            
         String introspectionUrl = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token/introspect";
         
         HttpHeaders headers = new HttpHeaders();
@@ -227,7 +228,7 @@ public class KeyCloakAuth {
         String userId=(String)(getUser(authorizationHeader).get("sub"));
         if(userId!=null){
                 return ResponseEntity.status(200).body(userId);
-            }
+        }
             return ResponseEntity.notFound().build();
     }
 }

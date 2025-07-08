@@ -9,22 +9,29 @@ import com.auth.auth.dto.UserDto;
 import com.auth.auth.service.KeyCloakAuth;
 import com.auth.grpc.*;
 // import org.springframework.beans.factory.annotation.Autowired;
+import com.auth.auth.config.interceptor.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+
 
 import io.grpc.stub.StreamObserver;
-import io.grpc.Metadata;
-import io.grpc.Context;
-import io.grpc.ServerCall;
-import io.grpc.ServerCallHandler;
+import lombok.NoArgsConstructor;
+import io.grpc.ServerCall.Listener;
+import io.grpc.*;
+
 
 @GrpcService
 public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
-
+    
     private final KeyCloakAuth keyCloakAuth;
-
+    
     public AuthServiceImpl(KeyCloakAuth keyCloakAuth) {
         this.keyCloakAuth = keyCloakAuth;
     }
+    
+    
+
+
 
     @Override
     public void register(User request, StreamObserver<RegisterResponse> responseObserver) {
@@ -114,4 +121,25 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void getUserID(Empty request, StreamObserver<UserIdResponse> responseObserver) {
+    
+        
+        String authToken = HeaderServerInterceptor.AUTH_TOKEN_KEY.get(Context.current());
+        // System.out.println("auth: " +authToken);
+        try {
+            ResponseEntity<?> responseEntity = keyCloakAuth.getUserId(authToken);
+
+            
+            UserIdResponse responseBuilder = UserIdResponse.newBuilder().setId(responseEntity.getBody().toString()).build();
+    
+            responseObserver.onNext(responseBuilder);
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+            return;
+        }
+        responseObserver.onCompleted();
+    }
+
 }
