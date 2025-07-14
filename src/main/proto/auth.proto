@@ -1,5 +1,5 @@
 syntax = "proto3";
-
+package auth;
 option java_multiple_files = true;
 option java_package = "com.auth.grpc";
 option java_outer_classname = "AuthProto";
@@ -26,7 +26,10 @@ message LoginRequest {
 }
 
 message LoginResponse{
-  string data = 1;
+  string access_token = 1;
+  int32 expires_in = 2;
+  int32 refresh_expires_in = 3;
+  string refresh_token = 4;
 }
 // Logout
 message LogoutRequest{
@@ -41,12 +44,22 @@ message RefreshRequest{
   string refresh_token = 1;
 }
 message RefreshResponse{
-  string data = 1;
+  string access_token = 1;
+  int32 expires_in = 2;
+  int32 refresh_expires_in = 3;
+  string refresh_token = 4;
 }
 
 //User ID
 message UserIdResponse{
   string id = 1;
+}
+
+//User Info
+message UserInfoResponse{
+  string id = 1;
+  string email = 2;
+  string username = 3;
 }
 message Empty{}
 // Service definition
@@ -56,4 +69,5 @@ service AuthService {
   rpc Logout (LogoutRequest) returns (LogoutResponse);
   rpc RefreshToken (RefreshRequest) returns (RefreshResponse);
   rpc GetUserID (Empty) returns (UserIdResponse);
+  rpc GetUserInfo (Empty) returns (UserInfoResponse);
 }

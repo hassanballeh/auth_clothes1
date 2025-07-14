@@ -1,16 +1,18 @@
 package com.auth.auth.service;
 
 import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.UserResource;
+
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.web.client.RestTemplate;
 
 import jakarta.ws.rs.core.Response;
 import com.auth.auth.dto.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
-import org.springframework.scheduling.annotation.Scheduled;
+
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -25,9 +27,9 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.regex.*;
+
+import javax.annotation.CheckForSigned;
 
 
 
@@ -66,7 +68,7 @@ public class KeyCloakAuth {
 
                 user.setUsername(userDto.getUsername());
                 user.setEmail(userDto.getEmail());
-                user.setEmailVerified(false);
+                user.setEmailVerified(true);
 
                 // Set password
                 CredentialRepresentation credential = new CredentialRepresentation();
@@ -112,10 +114,6 @@ public class KeyCloakAuth {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("User not found");
             }
-            // if(!user.isEmailVerified()){
-            //     return ResponseEntity.status(401).body("You Should Verify Your Email");
-            // }
-            
             // Call Keycloak token endpoint
             HttpClient client = HttpClients.createDefault();
             HttpPost post = new HttpPost(keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token");
@@ -131,8 +129,12 @@ public class KeyCloakAuth {
             HttpResponse response = client.execute(post);
             
             String responseBody = EntityUtils.toString(response.getEntity());
-           
-          return ResponseEntity.status(response.getStatusLine().getStatusCode()).body(responseBody);
+            ObjectMapper mapper = new ObjectMapper();
+            
+            Map <String, Object> tokenData = mapper.readValue(responseBody, Map.class);
+                
+        //    System.out.println(tokenData);
+          return ResponseEntity.status(response.getStatusLine().getStatusCode()).body(tokenData);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Login error: User Not Found " );
         }
@@ -182,7 +184,10 @@ public class KeyCloakAuth {
             
             if (response.getStatusLine().getStatusCode() == 200) {
                 String responseBody = EntityUtils.toString(response.getEntity());
-                return ResponseEntity.ok(responseBody);  // New tokens
+            ObjectMapper mapper = new ObjectMapper();
+            
+            Map <String, Object> tokenData = mapper.readValue(responseBody, Map.class);
+                return ResponseEntity.ok(tokenData);  // New tokens
             } else {
                 // If refresh fails (likely expired)
                 return ResponseEntity.status(401).body("Refresh token expired. Please log in again.");
@@ -230,5 +235,12 @@ public class KeyCloakAuth {
                 return ResponseEntity.status(200).body(userId);
         }
             return ResponseEntity.notFound().build();
+    }
+    public ResponseEntity<?> getUserInfo(String authorizationHeader){
+        Map<?,?> map=getUser(authorizationHeader);
+        if(map==null){
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.status(200).body(map);
     }
 }

@@ -12,7 +12,7 @@ public static final Context.Key<String> AUTH_TOKEN_KEY = Context.key("authToken"
         
         // Extract the Authorization header
         String authHeader = headers.get(Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER));
-        // System.out.println("ssss ::"+authHeader);
+        
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return Contexts.interceptCall(Context.current().withValue(AUTH_TOKEN_KEY, authHeader), call, headers, next);
         } else {
