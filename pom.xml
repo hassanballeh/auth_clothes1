@@ -67,6 +67,8 @@
             <artifactId>httpclient5</artifactId>
         </dependency>
 
+ 
+
         <!-- JAX-RS -->
        <dependency>
     <groupId>jakarta.ws.rs</groupId>
@@ -143,6 +145,7 @@
 
 
     </dependencies>
+   
 
     <build>
         <plugins>

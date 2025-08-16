@@ -1,8 +1,9 @@
 package com.auth.auth.service;
 
 import org.keycloak.admin.client.Keycloak;
-
+import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.web.client.RestTemplate;
 
@@ -28,6 +29,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.annotation.CheckForSigned;
 
@@ -66,7 +68,8 @@ public class KeyCloakAuth {
                 UserRepresentation user = new UserRepresentation();
                 user.setEnabled(true);
 
-                user.setUsername(userDto.getUsername());
+                String username = UUID.randomUUID().toString();
+                user.setUsername(username);
                 user.setEmail(userDto.getEmail());
                 user.setEmailVerified(true);
 
@@ -77,7 +80,9 @@ public class KeyCloakAuth {
                 credential.setTemporary(false);
                 user.setCredentials(Arrays.asList(credential));
                 user.setRequiredActions(new ArrayList<>());
-                
+                Map<String, List<String>> attributes = new HashMap<>();
+                 attributes.put("name", List.of(userDto.getUsername()));
+                user.setAttributes(attributes);
                 // Create user
                 Response response = keycloakAdmin.realm(realm).users().create(user);
                 
@@ -92,12 +97,35 @@ public class KeyCloakAuth {
                     return ResponseEntity.status(201).body("User registered successfully");
                 } else {
                     String errorMessage = response.readEntity(String.class);
-                    return ResponseEntity.status(response.getStatus()).body(errorMessage);
+                    return ResponseEntity.status(409).body(errorMessage);
                 }
             } catch (Exception e) {
                 return ResponseEntity.status(500).body("Error: " + e.getMessage());
             }
     }
+private List<String> getUserClientRoles(String userId) {
+    // First, get the client UUID by clientId (client name)
+    List<ClientRepresentation> clients = keycloakAdmin.realm(realm)
+        .clients()
+        .findByClientId(clientId);
+    if (clients.isEmpty()) {
+        return Collections.emptyList();
+    }
+    String clientUuid = clients.get(0).getId();
+
+    List<RoleRepresentation> clientRoles = keycloakAdmin.realm(realm)
+        .users()
+        .get(userId)
+        .roles()
+        .clientLevel(clientUuid)
+        .listAll();
+
+    return clientRoles.stream()
+        .map(RoleRepresentation::getName)
+        .collect(Collectors.toList());
+}
+
+
 
     public ResponseEntity<?> login(LoginDto loginDto){
         try {
@@ -129,10 +157,16 @@ public class KeyCloakAuth {
             HttpResponse response = client.execute(post);
             
             String responseBody = EntityUtils.toString(response.getEntity());
+            // System.out.println(responseBody);
             ObjectMapper mapper = new ObjectMapper();
             
             Map <String, Object> tokenData = mapper.readValue(responseBody, Map.class);
-                
+                List<String> roles = getUserClientRoles(user.getId());
+                if(roles.size()==1)
+                tokenData.put("role", roles.toArray()[0]);
+                else
+                tokenData.put("role", "");
+        // Add roles to tokenData map
         //    System.out.println(tokenData);
           return ResponseEntity.status(response.getStatusLine().getStatusCode()).body(tokenData);
         } catch (Exception e) {

@@ -1,7 +1,9 @@
 package com.auth.auth.config.interceptor;
 
-import io.grpc.*;
+import org.springframework.stereotype.Component;
 
+import io.grpc.*;
+@Component
 public class HeaderServerInterceptor implements ServerInterceptor {
 public static final Context.Key<String> AUTH_TOKEN_KEY = Context.key("authToken");
     @Override

@@ -30,6 +30,7 @@ message LoginResponse{
   int32 expires_in = 2;
   int32 refresh_expires_in = 3;
   string refresh_token = 4;
+  string role = 5;
 }
 // Logout
 message LogoutRequest{
