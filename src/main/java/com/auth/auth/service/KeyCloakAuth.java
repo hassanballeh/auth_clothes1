@@ -31,7 +31,7 @@ import org.apache.http.util.EntityUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import javax.annotation.CheckForSigned;
+
 
 
 
@@ -71,7 +71,7 @@ public class KeyCloakAuth {
                 String username = UUID.randomUUID().toString();
                 user.setUsername(username);
                 user.setEmail(userDto.getEmail());
-                user.setEmailVerified(true);
+                // user.setEmailVerified(true);
 
                 // Set password
                 CredentialRepresentation credential = new CredentialRepresentation();
@@ -277,4 +277,32 @@ private List<String> getUserClientRoles(String userId) {
         }
         return ResponseEntity.status(200).body(map);
     }
+
+    public ResponseEntity<?> deleteUser(String email) {
+    try {
+        // Find user(s) by email
+        List<UserRepresentation> users = keycloakAdmin.realm(realm)
+                .users()
+                .search(email, true); // 'true' means exact match
+
+        if (users == null || users.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Get the first matching user (or handle multiple matches)
+        String userId = users.get(0).getId();
+
+        // Delete by userId
+        keycloakAdmin.realm(realm)
+                .users()
+                .get(userId)
+                .remove();
+
+        return ResponseEntity.noContent().build();
+
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+    }
+}
+
 }

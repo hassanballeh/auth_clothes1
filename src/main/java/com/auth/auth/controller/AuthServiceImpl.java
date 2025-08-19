@@ -2,17 +2,18 @@ package com.auth.auth.controller;
 
 import java.util.Map;
 
-// import org.springframework.grpc.server.service.GrpcService;
+
 
 import com.auth.auth.dto.LoginDto;
 import com.auth.auth.dto.LogoutDto;
 import com.auth.auth.dto.RefreshTokenDto;
 import com.auth.auth.dto.UserDto;
+import com.auth.auth.service.EmailGrpcClient;
 import com.auth.auth.service.KeyCloakAuth;
 import com.auth.grpc.*;
+import com.email.grpc.SendEmailResponse;
 
 import org.springframework.grpc.server.service.GrpcService;
-// import com.auth.auth.config.interceptor.*;
 import org.springframework.http.ResponseEntity;
 
 
@@ -25,13 +26,15 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
     
     private final KeyCloakAuth keyCloakAuth;
     
-    public AuthServiceImpl(KeyCloakAuth keyCloakAuth) {
+    private final EmailGrpcClient emailGrpcClient;
+    public AuthServiceImpl(KeyCloakAuth keyCloakAuth,EmailGrpcClient emailGrpcClient) {
         this.keyCloakAuth = keyCloakAuth;
+        this.emailGrpcClient=emailGrpcClient;
     }
     @Override
     public void register(User request, StreamObserver<RegisterResponse> responseObserver) {
     
-        // Create UserDto from the gRPC User message
+       
         UserDto userDto = new UserDto();
         userDto.setUsername(request.getUsername());
         userDto.setEmail(request.getEmail());
@@ -41,8 +44,14 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
         
         try {
             ResponseEntity<?> responseEntity = keyCloakAuth.registerUser(userDto);
+            boolean success = responseEntity.getStatusCode().value() == 201;
+
+        if (success) {
+            System.out.println("send email");
+            Boolean res= emailGrpcClient.sendEmail(userDto.getEmail(), userDto.getUsername());
+            System.out.println("res :"+res);
+        }
             RegisterResponse responseBuilder = RegisterResponse.newBuilder().setSuccess(responseEntity.getStatusCode().value()==201?true:false).setMessage(responseEntity.getBody() != null ? responseEntity.getBody().toString() : "No response body").setStatusCode(responseEntity.getStatusCodeValue()).build();
-    
             responseObserver.onNext(responseBuilder);
         } catch (Exception e) {
             ResponseEntity<?> responseEntity = keyCloakAuth.registerUser(userDto);
@@ -55,8 +64,6 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
 
     @Override
     public void login(LoginRequest request, StreamObserver<LoginResponse> responseObserver) {
-    
-        // Create UserDto from the gRPC User message
         LoginDto userDto = new LoginDto();
         userDto.setEmail(request.getEmail());
         userDto.setPassword(request.getPassword());
@@ -87,7 +94,7 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
     @Override
     public void logout(LogoutRequest request, StreamObserver<LogoutResponse> responseObserver) {
     
-        // Create UserDto from the gRPC User message
+        
         LogoutDto userDto = new LogoutDto();
         userDto.setRefreshToken(request.getRefreshToken());
         
@@ -107,8 +114,6 @@ public class AuthServiceImpl extends AuthServiceGrpc.AuthServiceImplBase {
 
     @Override
     public void refreshToken(RefreshRequest request, StreamObserver<RefreshResponse> responseObserver) {
-    
-        // Create UserDto from the gRPC User message
         RefreshTokenDto userDto = new RefreshTokenDto();
         userDto.setRefreshToken(request.getRefreshToken());
         
